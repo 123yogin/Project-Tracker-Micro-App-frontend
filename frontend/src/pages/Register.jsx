@@ -1,14 +1,12 @@
+
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import Button from '../components/ui/Button';
+import Input from '../components/ui/Input';
+import Card from '../components/ui/Card';
+import AuthLayout from '../components/AuthLayout';
 
-/*
- * FIXES vs. original:
- * - Error response reads .data.error (matches backend), not .data.message.
- * - Handles marshmallow validation errors (.data.errors).
- * - Registration now auto-logins (AuthContext stores the token), so redirect to /dashboard.
- * - Added password confirmation field.
- */
 function Register() {
   const { register } = useAuth();
   const navigate = useNavigate();
@@ -16,8 +14,8 @@ function Register() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     setLoading(true);
     setError('');
 
@@ -29,72 +27,85 @@ function Register() {
 
     try {
       await register(formData.email, formData.password);
-      // AuthContext now stores the token automatically → go to dashboard
       navigate('/dashboard', { replace: true });
     } catch (err) {
       const errorData = err.response?.data;
-      if (errorData?.errors) {
-        const messages = Object.values(errorData.errors).flat().join(' ');
-        setError(messages || errorData.error || 'Registration failed.');
-      } else {
-        setError(errorData?.error || 'Registration failed. Please try again.');
-      }
+      setError(errorData?.error || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <main className="auth-container">
-      <form className="card auth-card" onSubmit={handleSubmit}>
-        <h1>Register</h1>
-        <p className="subtext">Create your account to manage projects.</p>
-
-        <label htmlFor="reg-email">Email</label>
-        <input
-          id="reg-email"
-          type="email"
-          placeholder="you@example.com"
-          value={formData.email}
-          onChange={(event) => setFormData((prev) => ({ ...prev, email: event.target.value }))}
-          required
+    <AuthLayout>
+      <Card>
+        <Card.Header
+          title="Create an account"
+          description="Start managing your projects in minutes"
         />
+        <Card.Content>
+          <form onSubmit={handleSubmit}>
+            <Input
+              id="email"
+              type="email"
+              label="Email address"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              placeholder="you@company.com"
+              required
+            />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <Input
+                id="password"
+                type="password"
+                label="Password"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                placeholder="Min 8 chars"
+                required
+                minLength={8}
+              />
+              <Input
+                id="confirmPassword"
+                type="password"
+                label="Confirm (again)"
+                value={formData.confirmPassword}
+                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                placeholder="Re-enter"
+                required
+              />
+            </div>
 
-        <label htmlFor="reg-password">Password</label>
-        <input
-          id="reg-password"
-          type="password"
-          placeholder="Minimum 8 characters"
-          value={formData.password}
-          onChange={(event) => setFormData((prev) => ({ ...prev, password: event.target.value }))}
-          minLength={8}
-          required
-        />
+            {error && (
+              <div style={{
+                color: 'var(--danger-text)',
+                backgroundColor: 'var(--danger-bg)',
+                padding: '10px',
+                borderRadius: 'var(--radius-md)',
+                fontSize: '13px',
+                marginBottom: '16px'
+              }}>
+                {error}
+              </div>
+            )}
 
-        <label htmlFor="reg-confirm-password">Confirm Password</label>
-        <input
-          id="reg-confirm-password"
-          type="password"
-          placeholder="Re-enter your password"
-          value={formData.confirmPassword}
-          onChange={(event) =>
-            setFormData((prev) => ({ ...prev, confirmPassword: event.target.value }))
-          }
-          minLength={8}
-          required
-        />
-
-        {error ? <p className="message message-error">{error}</p> : null}
-
-        <button type="submit" className="btn btn-primary" disabled={loading}>
-          {loading ? 'Creating account...' : 'Register'}
-        </button>
-
-        <p className="auth-link">
-          Already have an account? <Link to="/login">Login</Link>
-        </p>
-      </form>
-    </main>
+            <Button
+              type="submit"
+              variant="primary"
+              loading={loading}
+              style={{ width: '100%' }}
+            >
+              Create account
+            </Button>
+          </form>
+        </Card.Content>
+        <Card.Footer>
+          <p className="text-sm text-muted">
+            Already have an account? <Link to="/login" style={{ color: 'var(--primary-600)', fontWeight: '600' }}>Log in</Link>
+          </p>
+        </Card.Footer>
+      </Card>
+    </AuthLayout>
   );
 }
 
