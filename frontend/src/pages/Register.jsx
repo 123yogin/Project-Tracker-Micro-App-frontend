@@ -1,27 +1,44 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
+/*
+ * FIXES vs. original:
+ * - Error response reads .data.error (matches backend), not .data.message.
+ * - Handles marshmallow validation errors (.data.errors).
+ * - Registration now auto-logins (AuthContext stores the token), so redirect to /dashboard.
+ * - Added password confirmation field.
+ */
 function Register() {
   const { register } = useAuth();
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({ email: '', password: '' });
+  const [formData, setFormData] = useState({ email: '', password: '', confirmPassword: '' });
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     setLoading(true);
     setError('');
-    setSuccess('');
+
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match.');
+      setLoading(false);
+      return;
+    }
 
     try {
       await register(formData.email, formData.password);
-      setSuccess('Registration successful! Redirecting to login...');
-      setTimeout(() => navigate('/login'), 900);
+      // AuthContext now stores the token automatically → go to dashboard
+      navigate('/dashboard', { replace: true });
     } catch (err) {
-      setError(err.response?.data?.message || 'Registration failed. Please try again.');
+      const errorData = err.response?.data;
+      if (errorData?.errors) {
+        const messages = Object.values(errorData.errors).flat().join(' ');
+        setError(messages || errorData.error || 'Registration failed.');
+      } else {
+        setError(errorData?.error || 'Registration failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -33,9 +50,9 @@ function Register() {
         <h1>Register</h1>
         <p className="subtext">Create your account to manage projects.</p>
 
-        <label htmlFor="email">Email</label>
+        <label htmlFor="reg-email">Email</label>
         <input
-          id="email"
+          id="reg-email"
           type="email"
           placeholder="you@example.com"
           value={formData.email}
@@ -43,19 +60,31 @@ function Register() {
           required
         />
 
-        <label htmlFor="password">Password</label>
+        <label htmlFor="reg-password">Password</label>
         <input
-          id="password"
+          id="reg-password"
           type="password"
-          placeholder="Choose a strong password"
+          placeholder="Minimum 8 characters"
           value={formData.password}
           onChange={(event) => setFormData((prev) => ({ ...prev, password: event.target.value }))}
-          minLength={6}
+          minLength={8}
+          required
+        />
+
+        <label htmlFor="reg-confirm-password">Confirm Password</label>
+        <input
+          id="reg-confirm-password"
+          type="password"
+          placeholder="Re-enter your password"
+          value={formData.confirmPassword}
+          onChange={(event) =>
+            setFormData((prev) => ({ ...prev, confirmPassword: event.target.value }))
+          }
+          minLength={8}
           required
         />
 
         {error ? <p className="message message-error">{error}</p> : null}
-        {success ? <p className="message message-success">{success}</p> : null}
 
         <button type="submit" className="btn btn-primary" disabled={loading}>
           {loading ? 'Creating account...' : 'Register'}

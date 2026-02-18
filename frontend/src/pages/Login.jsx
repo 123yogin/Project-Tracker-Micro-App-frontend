@@ -1,7 +1,10 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
+/*
+ * FIX: Error response reads .data.error (matches backend), not .data.message.
+ */
 function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -20,7 +23,14 @@ function Login() {
       const redirectTo = location.state?.from?.pathname || '/dashboard';
       navigate(redirectTo, { replace: true });
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed. Please check your credentials.');
+      // Read validation errors or flat error
+      const errorData = err.response?.data;
+      if (errorData?.errors) {
+        const messages = Object.values(errorData.errors).flat().join(' ');
+        setError(messages || errorData.error || 'Login failed.');
+      } else {
+        setError(errorData?.error || 'Login failed. Please check your credentials.');
+      }
     } finally {
       setLoading(false);
     }

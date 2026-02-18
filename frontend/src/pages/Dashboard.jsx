@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Navbar from '../components/Navbar';
 import ProjectCard from '../components/ProjectCard';
 import api from '../api/axios';
@@ -14,9 +14,10 @@ function Dashboard() {
     setError('');
     try {
       const response = await api.get('/projects');
-      setProjects(response.data || []);
+      const data = response.data;
+      setProjects(Array.isArray(data) ? data : data.items || []);
     } catch (err) {
-      setError(err.response?.data?.message || 'Unable to load projects.');
+      setError(err.response?.data?.error || 'Unable to load projects.');
     } finally {
       setLoading(false);
     }
@@ -35,7 +36,7 @@ function Dashboard() {
       setProjects((prev) => [response.data, ...prev]);
       setProjectName('');
     } catch (err) {
-      setError(err.response?.data?.message || 'Unable to create project.');
+      setError(err.response?.data?.error || 'Unable to create project.');
     }
   };
 
@@ -44,7 +45,7 @@ function Dashboard() {
       await api.delete(`/projects/${id}`);
       setProjects((prev) => prev.filter((project) => project.id !== id));
     } catch (err) {
-      setError(err.response?.data?.message || 'Unable to delete project.');
+      setError(err.response?.data?.error || 'Unable to delete project.');
     }
   };
 

@@ -1,50 +1,66 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import api from '../api/axios';
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(() => localStorage.getItem('token'));
-  const [isAuthenticated, setIsAuthenticated] = useState(Boolean(localStorage.getItem('token')));
+  const [user, setUser] = useState(null);
+
+  const isAuthenticated = Boolean(token);
 
   useEffect(() => {
     if (token) {
       localStorage.setItem('token', token);
-      setIsAuthenticated(true);
     } else {
       localStorage.removeItem('token');
-      setIsAuthenticated(false);
+      setUser(null);
     }
   }, [token]);
 
-  const login = async (email, password) => {
+  const login = useCallback(async (email, password) => {
     const response = await api.post('/auth/login', { email, password });
-    const receivedToken = response?.data?.token;
+    const { access_token, user: userData } = response.data;
 
-    if (!receivedToken) {
-      throw new Error('No token received from server');
+    if (!access_token) {
+      throw new Error('No access_token received from server');
     }
 
-    setToken(receivedToken);
-  };
+    setToken(access_token);
+    setUser(userData || null);
+  }, []);
 
-  const register = async (email, password) => {
-    await api.post('/auth/register', { email, password });
-  };
+  const register = useCallback(async (email, password) => {
+    const response = await api.post('/auth/register', { email, password });
+    const { access_token, user: userData } = response.data;
 
-  const logout = () => {
+    if (access_token) {
+      setToken(access_token);
+      setUser(userData || null);
+    }
+
+    return response.data;
+  }, []);
+
+  const logout = useCallback(async () => {
+    try {
+      await api.post('/auth/logout');
+    } catch {
+      // Ignore — token will be cleared either way
+    }
     setToken(null);
-  };
+  }, []);
 
   const value = useMemo(
     () => ({
       token,
+      user,
       isAuthenticated,
       login,
       register,
       logout,
     }),
-    [token, isAuthenticated],
+    [token, user, isAuthenticated, login, register, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

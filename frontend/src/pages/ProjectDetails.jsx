@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import TaskItem from '../components/TaskItem';
@@ -19,18 +19,15 @@ function ProjectDetails() {
 
       try {
         const [projectResponse, taskResponse] = await Promise.all([
-          api.get('/projects'),
+          api.get(`/projects/${id}`),
           api.get(`/tasks/${id}`),
         ]);
 
-        const selectedProject = (projectResponse.data || []).find(
-          (candidate) => String(candidate.id) === String(id),
-        );
-
-        setProject(selectedProject || null);
-        setTasks(taskResponse.data || []);
+        setProject(projectResponse.data || null);
+        const taskData = taskResponse.data;
+        setTasks(Array.isArray(taskData) ? taskData : taskData.items || []);
       } catch (err) {
-        setError(err.response?.data?.message || 'Unable to load project details.');
+        setError(err.response?.data?.error || 'Unable to load project details.');
       } finally {
         setLoading(false);
       }
@@ -44,24 +41,28 @@ function ProjectDetails() {
     if (!taskTitle.trim()) return;
 
     try {
-      const response = await api.post('/tasks', { title: taskTitle.trim(), project_id: Number(id) });
+      const response = await api.post('/tasks', {
+        title: taskTitle.trim(),
+        project_id: Number(id),
+      });
       setTasks((prev) => [response.data, ...prev]);
       setTaskTitle('');
     } catch (err) {
-      setError(err.response?.data?.message || 'Unable to create task.');
+      setError(err.response?.data?.error || 'Unable to create task.');
     }
   };
 
   const handleToggleTask = async (task) => {
+    const newStatus = task.status === 'completed' ? 'pending' : 'completed';
     try {
       const response = await api.put(`/tasks/${task.id}`, {
-        title: task.title,
-        completed: !task.completed,
-        project_id: task.project_id,
+        status: newStatus,
       });
-      setTasks((prev) => prev.map((item) => (item.id === task.id ? response.data : item)));
+      setTasks((prev) =>
+        prev.map((item) => (item.id === task.id ? response.data : item)),
+      );
     } catch (err) {
-      setError(err.response?.data?.message || 'Unable to update task.');
+      setError(err.response?.data?.error || 'Unable to update task.');
     }
   };
 
@@ -70,7 +71,7 @@ function ProjectDetails() {
       await api.delete(`/tasks/${taskId}`);
       setTasks((prev) => prev.filter((task) => task.id !== taskId));
     } catch (err) {
-      setError(err.response?.data?.message || 'Unable to delete task.');
+      setError(err.response?.data?.error || 'Unable to delete task.');
     }
   };
 
