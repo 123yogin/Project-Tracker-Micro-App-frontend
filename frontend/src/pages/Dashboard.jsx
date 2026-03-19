@@ -13,6 +13,7 @@ function Dashboard() {
   const { addToast } = useToast();
   const [projects, setProjects] = useState([]);
   const [activities, setActivities] = useState([]);
+  const [invites, setInvites] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
@@ -25,7 +26,8 @@ function Dashboard() {
     try {
       const [projRes, actRes] = await Promise.all([
         api.get('/projects'),
-        api.get('/users/activity')
+        api.get('/users/activity'),
+        api.get('/invites/mine').then((res) => setInvites(res.data.items || []))
       ]);
       const data = projRes.data;
       setProjects(Array.isArray(data) ? data : data.items || []);
@@ -80,11 +82,40 @@ function Dashboard() {
     }
   }, [addToast]);
 
+  const handleAcceptInvite = async (token) => {
+    try {
+      await api.post(`/invites/${token}/accept`);
+      addToast('Invite accepted.', 'success');
+      fetchData();
+    } catch (err) {
+      addToast(err.response?.data?.error || 'Failed to accept invite', 'error');
+    }
+  };
+
   return (
     <Layout>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '32px', alignItems: 'start' }} className="dashboard-grid">
         {/* Main Content: Projects */}
         <div>
+          {invites.length > 0 && (
+            <Card style={{ marginBottom: '16px', border: '1px solid var(--primary-200)' }}>
+              <Card.Header title="Pending Invites" description="Join shared project workspaces." />
+              <Card.Content>
+                <div style={{ display: 'grid', gap: '10px' }}>
+                  {invites.map((invite) => (
+                    <div key={invite.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: '14px' }}>{invite.project_name}</div>
+                        <div className="text-xs text-muted">Invited as {invite.role}</div>
+                      </div>
+                      <Button size="sm" onClick={() => handleAcceptInvite(invite.token)}>Accept</Button>
+                    </div>
+                  ))}
+                </div>
+              </Card.Content>
+            </Card>
+          )}
+
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
             <div>
               <h1 style={{ fontSize: '24px', fontWeight: '700', color: 'var(--slate-900)' }}>Projects</h1>

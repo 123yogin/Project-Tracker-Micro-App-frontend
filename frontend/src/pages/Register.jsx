@@ -10,7 +10,7 @@ import AuthLayout from '../components/AuthLayout';
 function Register() {
   const { register } = useAuth();
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({ email: '', password: '', confirmPassword: '' });
+  const [formData, setFormData] = useState({ fullName: '', email: '', password: '', confirmPassword: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -26,11 +26,15 @@ function Register() {
     }
 
     try {
-      await register(formData.email, formData.password);
+      await register(formData.email, formData.password, formData.fullName);
       navigate('/dashboard', { replace: true });
     } catch (err) {
       const errorData = err.response?.data;
-      setError(errorData?.error || 'Registration failed. Please try again.');
+      if (!err.response) {
+        setError('Cannot reach server. Check backend is running and CORS origins are configured.');
+      } else {
+        setError(errorData?.error || 'Registration failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -45,6 +49,14 @@ function Register() {
         />
         <Card.Content>
           <form onSubmit={handleSubmit}>
+            <Input
+              id="fullName"
+              type="text"
+              label="Full name"
+              value={formData.fullName}
+              onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+              placeholder="Jane Doe"
+            />
             <Input
               id="email"
               type="email"
