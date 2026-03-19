@@ -35,9 +35,9 @@ function Settings() {
         e.preventDefault();
         setSaving(true);
         try {
-            await api.put('/users/me', { full_name: fullName });
+            const res = await api.put('/users/me', { full_name: fullName });
+            setUser(res.data);
             addToast('Profile updated!', 'success');
-            // Update local state to reflect saved status if needed
         } catch (err) {
             addToast('Failed to update profile', 'error');
         } finally {

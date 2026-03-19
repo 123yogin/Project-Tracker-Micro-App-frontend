@@ -70,7 +70,9 @@ function Navbar() {
             </Button>
           </Link>
           <div className="hidden-mobile" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: '1.2' }}>
-            <span style={{ fontSize: '13px', fontWeight: '500', color: 'var(--slate-700)' }}>{user.email}</span>
+            <span style={{ fontSize: '13px', fontWeight: '500', color: 'var(--slate-700)' }}>
+              {user.full_name || user.email}
+            </span>
             <span style={{ fontSize: '11px', color: 'var(--slate-500)' }}>Pro Plan</span>
           </div>
           <Button variant="outline" size="sm" onClick={handleLogout} aria-label="Sign Out">

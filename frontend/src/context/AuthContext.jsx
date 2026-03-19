@@ -18,6 +18,21 @@ export function AuthProvider({ children }) {
     }
   }, [token]);
 
+  useEffect(() => {
+    const bootstrapUser = async () => {
+      if (!token) {
+        return;
+      }
+      try {
+        const response = await api.get('/users/me');
+        setUser(response.data);
+      } catch {
+        setToken(null);
+      }
+    };
+    bootstrapUser();
+  }, [token]);
+
   const login = useCallback(async (email, password) => {
     const response = await api.post('/auth/login', { email, password });
     const { access_token, user: userData } = response.data;
@@ -30,8 +45,12 @@ export function AuthProvider({ children }) {
     setUser(userData || null);
   }, []);
 
-  const register = useCallback(async (email, password) => {
-    const response = await api.post('/auth/register', { email, password });
+  const register = useCallback(async (email, password, fullName = '') => {
+    const response = await api.post('/auth/register', {
+      email,
+      password,
+      full_name: fullName || null,
+    });
     const { access_token, user: userData } = response.data;
 
     if (access_token) {
